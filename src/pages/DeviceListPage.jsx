@@ -1,17 +1,18 @@
-// src/pages/DeviceListPage.jsx
 import { useEffect, useState } from "react";
 import { useApi } from "../hooks/useApi";
 
 const DEVICES = [
-  { model: "Camera-A", name: "4K Camera A" },
-  { model: "Laptop-B", name: "High-spec Laptop B" },
-  { model: "Mic-C", name: "Wireless Microphone C" },
+  { model: "Camera-A", name: "4K Camera A", desc: "Professional 4K cinema camera with lens kit." },
+  { model: "Laptop-B", name: "High-spec Laptop B", desc: "i9 Processor, 32GB RAM, RTX 4080." },
+  { model: "Mic-C", name: "Wireless Microphone C", desc: "Studio quality wireless microphone system." },
 ];
 
 export default function DeviceListPage() {
-  const { apiFetch } = useApi();
+  const { inventoryGet, bookingPost } = useApi();
+
   const [inventory, setInventory] = useState({});
   const [loading, setLoading] = useState(false);
+  const [actionLoading, setActionLoading] = useState(false);
   const [msg, setMsg] = useState("");
 
   useEffect(() => {
@@ -21,11 +22,11 @@ export default function DeviceListPage() {
 
       for (const d of DEVICES) {
         try {
-          const res = await fetch(
-            `http://localhost:7072/api/inventory/${encodeURIComponent(d.model)}`
+          const data = await inventoryGet(
+            `/inventory/${encodeURIComponent(d.model)}`
           );
-          result[d.model] = res.ok ? await res.json() : null;
-        } catch {
+          result[d.model] = data;
+        } catch (e) {
           result[d.model] = null;
         }
       }
@@ -38,59 +39,88 @@ export default function DeviceListPage() {
   }, []);
 
   async function reserve(model) {
+    setMsg("");
+    setActionLoading(true);
+
     try {
-      const res = await apiFetch("http://localhost:7071/api/bookings", {
-        method: "POST",
-        body: JSON.stringify({ deviceModel: model }),
+      const data = await bookingPost("/bookings", {
+        deviceModel: model,
       });
 
-      if (!res.ok) {
-        setMsg("Failed: " + (await res.text()));
-        return;
-      }
+      setMsg(`Successfully reserved ${model} (Booking ID: ${data.id})`);
 
-      const data = await res.json();
-      setMsg(`Reserved ${model} successfully (id: ${data.id})`);
+      // Refresh specific item
+      const updated = await inventoryGet(
+        `/inventory/${encodeURIComponent(model)}`
+      );
+
+      setInventory((prev) => ({
+        ...prev,
+        [model]: updated,
+      }));
     } catch (e) {
-      setMsg("Reservation error");
+      setMsg(e.message || "Reservation failed");
+    } finally {
+      setActionLoading(false);
     }
   }
 
   return (
     <div>
-      <h3>Available Devices</h3>
-      {loading && <p>Loading...</p>}
+      <header className="page-header flex-between">
+        <h2 className="page-title">Available Devices</h2>
+      </header>
 
-      <div style={{ display: "grid", gap: 12 }}>
-        {DEVICES.map((d) => {
-          const inv = inventory[d.model];
-          const available = inv ? inv.availableCount : "–";
+      {msg && (
+        <div style={{ 
+          background: msg.includes("failed") ? '#fee2e2' : '#dcfce7',
+          color: msg.includes("failed") ? '#b91c1c' : '#15803d',
+          padding: '1rem',
+          borderRadius: '8px',
+          marginBottom: '1.5rem'
+        }}>
+          {msg}
+        </div>
+      )}
 
-          return (
-            <div
-              key={d.model}
-              style={{
-                border: "1px solid #ccc",
-                borderRadius: 8,
-                padding: 12,
-                display: "flex",
-                justifyContent: "space-between",
-              }}
-            >
-              <div>
-                <strong>{d.name}</strong> <br />
-                Model: {d.model} <br />
-                Available:{" "}
-                <strong>{available === "–" ? "Unknown" : available}</strong>
+      {loading ? (
+        <div className="text-center" style={{ color: 'var(--text-muted)' }}>Loading inventory...</div>
+      ) : (
+        <div className="grid">
+          {DEVICES.map((d) => {
+            const inv = inventory[d.model];
+            const available = inv?.availableCount ?? 0;
+            const isAvailable = available > 0;
+
+            return (
+              <div key={d.model} className="card">
+                <div className="flex-between" style={{ marginBottom: '0.5rem' }}>
+                  <h3 className="card-title">{d.name}</h3>
+                  <span className={`badge ${isAvailable ? 'badge-success' : 'badge-gray'}`}>
+                    {isAvailable ? 'Available' : 'Out of Stock'}
+                  </span>
+                </div>
+                
+                <p className="card-meta">{d.desc}</p>
+                
+                <div className="flex-between" style={{ marginTop: '1.5rem' }}>
+                  <div style={{ fontSize: '0.9rem', color: 'var(--text-muted)' }}>
+                    In Stock: <strong style={{ color: 'var(--text-main)' }}>{available}</strong>
+                  </div>
+                  
+                  <button 
+                    className="btn btn-primary"
+                    disabled={!isAvailable || actionLoading}
+                    onClick={() => reserve(d.model)}
+                  >
+                    {actionLoading ? 'Processing...' : 'Reserve'}
+                  </button>
+                </div>
               </div>
-
-              <button onClick={() => reserve(d.model)}>Reserve</button>
-            </div>
-          );
-        })}
-      </div>
-
-      {msg && <p style={{ marginTop: 16 }}>{msg}</p>}
+            );
+          })}
+        </div>
+      )}
     </div>
   );
 }

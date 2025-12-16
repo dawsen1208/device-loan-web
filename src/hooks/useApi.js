@@ -1,23 +1,19 @@
 import { useAuth0 } from "@auth0/auth0-react";
 
+const BOOKING_API = import.meta.env.VITE_BOOKING_API;
+const INVENTORY_API = import.meta.env.VITE_INVENTORY_API;
 
 export function useApi() {
   const { getAccessTokenSilently } = useAuth0();
 
-  /**
-   * 核心方法 apiFetch():
-   * 自动带 Token 调用后端 Functions
-   */
   async function apiFetch(url, options = {}) {
-    // 获取 Access Token
     const token = await getAccessTokenSilently({
       authorizationParams: {
-        audience: "https://cdls-api", // 与 Auth0 API Identifier 一致
+        audience: "https://cdls-api",
       },
     });
 
-    // 执行请求
-    const response = await fetch(url, {
+    const res = await fetch(url, {
       ...options,
       headers: {
         "Content-Type": "application/json",
@@ -26,27 +22,26 @@ export function useApi() {
       },
     });
 
-    return response;
-  }
+    if (!res.ok) {
+      const text = await res.text();
+      throw new Error(text || res.statusText);
+    }
 
-  /**
-   * GET 请求封装
-   */
-  async function get(url) {
-    const res = await apiFetch(url, { method: "GET" });
     return res.json();
   }
 
-  /**
-   * POST 请求封装
-   */
-  async function post(url, body = {}) {
-    const res = await apiFetch(url, {
-      method: "POST",
-      body: JSON.stringify(body),
-    });
-    return res.json();
-  }
+  return {
+    bookingGet: (path) => apiFetch(`${BOOKING_API}${path}`),
+    bookingPost: (path, body) =>
+      apiFetch(`${BOOKING_API}${path}`, {
+        method: "POST",
+        body: JSON.stringify(body),
+      }),
 
-  return { apiFetch, get, post };
+    inventoryGet: async (path) => {
+      const res = await fetch(`${INVENTORY_API}${path}`);
+      if (!res.ok) throw new Error(res.statusText);
+      return res.json();
+    },
+  };
 }
