@@ -1,26 +1,38 @@
-name: Deploy Web App
+name: Deploy Web App to Storage
 
 on:
   push:
     branches:
       - main
+    paths:
+      - 'device-loan-web/**'
+      - '.github/workflows/deploy-web.yml'
 
 jobs:
-  build_and_deploy_job:
+  build_and_deploy:
     runs-on: ubuntu-latest
-    name: Build and Deploy Job
+    name: Build and Deploy
     steps:
       - uses: actions/checkout@v3
+      
+      - name: Set up Node.js
+        uses: actions/setup-node@v3
         with:
-          submodules: true
-          lfs: false
-      - name: Build And Deploy
-        id: builddeploy
-        uses: Azure/static-web-apps-deploy@v1
+          node-version: '18'
+          
+      - name: Install and Build
+        working-directory: ./device-loan-web
+        run: |
+          npm ci
+          npm run build
+          
+      - name: Upload to Azure Storage
+        uses: azure/CLI@v1
         with:
-          azure_static_web_apps_api_token: ${{ secrets.AZURE_STATIC_WEB_APPS_API_TOKEN }}
-          repo_token: ${{ secrets.GITHUB_TOKEN }}
-          action: "upload"
-          app_location: "/"
-          api_location: ""
-          output_location: "dist"
+          inlineScript: |
+            az storage blob upload-batch \
+              --destination '$web' \
+              --source ./device-loan-web/dist \
+              --account-name cdlswebf5177547 \
+              --connection-string "${{ secrets.AZURE_STORAGE_CONNECTION_STRING }}" \
+              --overwrite
