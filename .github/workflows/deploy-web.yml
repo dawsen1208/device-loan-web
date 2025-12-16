@@ -4,9 +4,6 @@ on:
   push:
     branches:
       - main
-    paths:
-      - 'device-loan-web/**'
-      - '.github/workflows/deploy-web.yml'
 
 jobs:
   build_and_deploy:
@@ -21,7 +18,6 @@ jobs:
           node-version: '18'
           
       - name: Install and Build
-        working-directory: ./device-loan-web
         run: |
           npm ci
           npm run build
@@ -32,7 +28,7 @@ jobs:
           inlineScript: |
             az storage blob upload-batch \
               --destination '$web' \
-              --source ./device-loan-web/dist \
+              --source dist \
               --account-name cdlswebf5177547 \
               --connection-string "${{ secrets.AZURE_STORAGE_CONNECTION_STRING }}" \
               --overwrite
