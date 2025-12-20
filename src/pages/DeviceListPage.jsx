@@ -5,6 +5,13 @@ const DEVICES = [
   { model: "Camera-A", name: "4K Camera A", desc: "Professional 4K cinema camera with lens kit." },
   { model: "Laptop-B", name: "High-spec Laptop B", desc: "i9 Processor, 32GB RAM, RTX 4080." },
   { model: "Mic-C", name: "Wireless Microphone C", desc: "Studio quality wireless microphone system." },
+  { model: "Tablet-D", name: "Pro Tablet 12.9", desc: "High-resolution tablet for digital art and design." },
+  { model: "VR-Headset-E", name: "VR Headset Pro", desc: "Immersive VR experience with motion controllers." },
+  { model: "Projector-F", name: "4K Projector", desc: "Bright 4K projector for presentations and screenings." },
+  { model: "Drone-G", name: "Camera Drone", desc: "4K camera drone with stabilization and GPS." },
+  { model: "Speaker-H", name: "Studio Monitor", desc: "High-fidelity active studio monitor speaker." },
+  { model: "Camera-I", name: "Mirrorless Camera", desc: "Compact mirrorless camera for street photography." },
+  { model: "Laptop-J", name: "Ultrabook J", desc: "Lightweight ultrabook with long battery life." },
 ];
 
 export default function DeviceListPage() {
